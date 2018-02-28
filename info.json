@@ -7,5 +7,5 @@
   "contact": "donotcontactme@example.com",
   "homepage": "https://mods.factorio.com/",
   "description": "Sneakily rotate locomotives that are being pulled backwards so that they actually help with acceleration instead of just being dead weight.",
-  "dependencies": ["base >= 0.16.0"]
+  "dependencies": ["base >= 0.16.27"]
 }

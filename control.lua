@@ -38,7 +38,7 @@ script.on_nth_tick(15, function()
 				global.lastmode[id] = train.manual_mode
 				if moving then -- Started moving: figure out which locos are facing the wrong way.
 					for _,w in pairs(train.locomotives) do
-						for k,loco in pairs(w) do
+						for _,loco in pairs(w) do
 							if loco.speed < 0 then
 								global[loco.unit_number] = true
 								rotate(loco)
