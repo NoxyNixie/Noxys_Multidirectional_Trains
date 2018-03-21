@@ -30,6 +30,7 @@ script.on_nth_tick(15, function()
 	local trains = game.surfaces[1].get_trains()
 	for _,train in pairs(trains) do
 		local id = train.id
+		local rotated = false
 		local moving = train.speed ~= 0
 		if moving ~= global.movingstate[id] then
 			local global = global
@@ -42,6 +43,7 @@ script.on_nth_tick(15, function()
 							if loco.speed < 0 then
 								global[loco.unit_number] = true
 								rotate(loco)
+								rotated = true
 								train = loco.train
 							end
 						end
@@ -52,13 +54,16 @@ script.on_nth_tick(15, function()
 					for _, loco in pairs(locos) do
 						if global[loco.unit_number] then
 							rotate(loco)
+							rotated = true
 							global[loco.unit_number] = nil
 							train = loco.train
 						end
 					end
 				end
 			end
-			train.manual_mode = global.lastmode[id]
+			if rotated then
+				train.manual_mode = global.lastmode[id]
+			end
 		end
 	end
 end)
