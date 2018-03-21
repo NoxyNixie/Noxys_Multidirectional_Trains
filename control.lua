@@ -29,14 +29,14 @@ end)
 script.on_nth_tick(15, function()
 	local trains = game.surfaces[1].get_trains()
 	for _,train in pairs(trains) do
-		if not train.manual_mode then
-			local id = train.id
-			local moving = train.speed ~= 0
-			if moving ~= global.movingstate[id] then
-				local global = global
-				global.movingstate[id] = moving
-				global.lastmode[id] = train.manual_mode
-				if moving then -- Started moving: figure out which locos are facing the wrong way.
+		local id = train.id
+		local moving = train.speed ~= 0
+		if moving ~= global.movingstate[id] then
+			local global = global
+			global.movingstate[id] = moving
+			global.lastmode[id] = train.manual_mode
+			if moving then -- Started moving: figure out which locos are facing the wrong way.
+				if not train.manual_mode then
 					for _,w in pairs(train.locomotives) do
 						for _,loco in pairs(w) do
 							if loco.speed < 0 then
@@ -46,19 +46,19 @@ script.on_nth_tick(15, function()
 							end
 						end
 					end
-				else -- No longer moving. Revert the train to its neutral state.
-					for _, locos in pairs(train.locomotives) do
-						for _, loco in pairs(locos) do
-							if global[loco.unit_number] then
-								rotate(loco)
-								global[loco.unit_number] = nil
-								train = loco.train
-							end
+				end
+			else -- No longer moving. Revert the train to its neutral state.
+				for _, locos in pairs(train.locomotives) do
+					for _, loco in pairs(locos) do
+						if global[loco.unit_number] then
+							rotate(loco)
+							global[loco.unit_number] = nil
+							train = loco.train
 						end
 					end
 				end
-				train.manual_mode = global.lastmode[id]
 			end
+			train.manual_mode = global.lastmode[id]
 		end
 	end
 end)
