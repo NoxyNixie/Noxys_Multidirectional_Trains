@@ -23,43 +23,87 @@ script.on_event(defines.events.on_train_created, function (event)
 	end
 end)
 
-script.on_nth_tick(15, function()
+local config = {}
+
+local function cache_settings()
+	config.enabled     = settings.global["Noxys_Multidirectional_Trains-enabled"].value
+	config.on_nth_tick = settings.global["Noxys_Multidirectional_Trains-on_nth_tick"].value
+end
+
+cache_settings()
+
+local function train_rotate(train)
+	local rotated = false
+	local manual_mode = train.manual_mode
+	for _,locos in pairs(train.locomotives) do
+		for _,loco in pairs(locos) do
+			if loco.speed < 0 then
+				if not global[loco.unit_number] then -- prevent double rotates
+					global[loco.unit_number] = true
+					rotate(loco)
+					rotated = true
+					train = loco.train
+				end
+			end
+		end
+	end
+	if rotated then
+		train.manual_mode = manual_mode
+	end
+end
+
+local function train_unrotate(train)
+	local rotated = false
+	local manual_mode = train.manual_mode
+	for _, locos in pairs(train.locomotives) do
+		for _, loco in pairs(locos) do
+			if global[loco.unit_number] then
+				rotate(loco)
+				rotated = true
+				global[loco.unit_number] = nil
+				train = loco.train
+			end
+		end
+	end
+	if rotated then
+		train.manual_mode = manual_mode
+	end
+end
+
+local function update_settings(event)
+	if event.setting == "Noxys_Multidirectional_Trains-enabled" then
+		config.enabled     = settings.global["Noxys_Multidirectional_Trains-enabled"].value
+		if config.enabled == false then
+			-- revert rotated trains
+			local trains = game.surfaces[1].get_trains()
+			for _,train in pairs(trains) do
+				train_unrotate(train)
+			end
+		end
+	end
+	if event.setting == "Noxys_Multidirectional_Trains-on_nth_tick" then
+		config.on_nth_tick = settings.global["Noxys_Multidirectional_Trains-on_nth_tick"].value
+	end
+end
+
+script.on_event({defines.events.on_runtime_mod_setting_changed}, update_settings)
+
+script.on_event(defines.events.on_tick, function(event)
+	if not config.enabled then return end
+	if event.tick % config.on_nth_tick ~= 0 then return end
 	local trains = game.surfaces[1].get_trains()
 	for _,train in pairs(trains) do
 		local id = train.id
-		local rotated = false
 		local moving = train.speed ~= 0
 		if moving ~= global.movingstate[id] then
 			local global = global
 			global.movingstate[id] = moving
-			local manual_mode = train.manual_mode
 			if moving then -- Started moving: figure out which locos are facing the wrong way.
-				if not manual_mode then
-					for _,w in pairs(train.locomotives) do
-						for _,loco in pairs(w) do
-							if loco.speed < 0 then
-								global[loco.unit_number] = true
-								rotate(loco)
-								rotated = true
-								train = loco.train
-							end
-						end
-					end
+				if not train.manual_mode then
+					train_rotate(train)
 				end
 			else -- No longer moving. Revert the train to its neutral state.
-				for _, locos in pairs(train.locomotives) do
-					for _, loco in pairs(locos) do
-						if global[loco.unit_number] then
-							rotate(loco)
-							rotated = true
-							global[loco.unit_number] = nil
-							train = loco.train
-						end
-					end
-				end
-			end
-			if rotated then
-				train.manual_mode = manual_mode
+				train_unrotate(train)
 			end
 		end
 	end
