@@ -33,7 +33,6 @@ script.on_nth_tick(15, function()
 			local global = global
 			global.movingstate[id] = moving
 			local manual_mode = train.manual_mode
-			game.print("Mode Pre : " .. tostring(manual_mode))
 			if moving then -- Started moving: figure out which locos are facing the wrong way.
 				if not manual_mode then
 					for _,w in pairs(train.locomotives) do
@@ -60,7 +59,6 @@ script.on_nth_tick(15, function()
 				end
 			end
 			if rotated then
-				game.print("Mode Post: " .. tostring(manual_mode))
 				train.manual_mode = manual_mode
 			end
 		end
