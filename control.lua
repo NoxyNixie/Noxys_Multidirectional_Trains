@@ -93,6 +93,7 @@ script.on_event(defines.events.on_tick, function(event)
 	if event.tick % config.on_nth_tick ~= 0 then return end
 	local trains = game.surfaces[1].get_trains()
 	for _,train in pairs(trains) do
+		if not train or not train.valid then return end
 		local id = train.id
 		local moving = train.speed ~= 0
 		if moving ~= global.movingstate[id] then
