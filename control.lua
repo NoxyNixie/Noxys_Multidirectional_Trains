@@ -52,30 +52,21 @@ end
 -- rotate all locomotives to face driving direction
 -- rotated locomotives are added to global.rotated_locos
 function RotateTrain(train)
-  local rotate_locos = {}
   local manual_mode = train.manual_mode
-  -- train becomes invalid when rotating carriages
-  -- collect locos to rotate
 
   if manual_mode then return end -- never rotate manual mode trains
 
+  -- train becomes invalid when rotating carriages, updating to loco.train inside the loops allows working with the updated reference
   for _, movers in pairs(train.locomotives) do
     for _, loco in pairs(movers) do
       if not global.rotated_locos[loco.unit_number] and loco.speed < 0 then
         -- rotate_locos[#rotate_locos+1] = loco
         global.rotated_locos[loco.unit_number] = true
         rotate(loco)
-        train = loco.train -- changing the reference of the iterated list seems like a bad idea
+        train = loco.train
       end
     end
   end
-
-  -- do rotation without worrying about invalidating the train
-  -- for _, loco in pairs(rotate_locos) do
-    -- global.rotated_locos[loco.unit_number] = true
-    -- rotate(loco)
-    -- train = loco.train
-  -- end
 
   -- setting train back to previous mode without check causes train to bounce between states
   if train.manual_mode ~= manual_mode then
@@ -85,27 +76,17 @@ end
 
 -- rotate locomotives listed in global.rotated_locos
 function UnrotateTrain(train)
-  local rotate_locos = {}
   local manual_mode = train.manual_mode
-  -- train becomes invalid when rotating carriages
-  -- collect locos to rotate
+  -- train becomes invalid when rotating carriages, updating to loco.train inside the loops allows working with the updated reference
   for _, movers in pairs(train.locomotives) do
     for _, loco in pairs(movers) do
       if global.rotated_locos[loco.unit_number] then
-        -- rotate_locos[#rotate_locos+1] = loco
         rotate(loco)
         global.rotated_locos[loco.unit_number] = nil
-        train = loco.train -- changing the reference of the iterated list seems like a bad idea
+        train = loco.train
       end
     end
   end
-
-  -- do rotation without worrying about invalidating the train
-  -- for _, loco in pairs(rotate_locos) do
-    -- rotate(loco)
-    -- global.rotated_locos[loco.unit_number] = nil
-    -- train = loco.train
-  -- end
 
   -- setting train back to previous mode without check causes train to bounce between states
   if train.manual_mode ~= manual_mode then
