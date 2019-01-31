@@ -9,15 +9,20 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
       script.on_event(defines.events.on_train_changed_state, OnTrainStateChanged)
     else
       script.on_event(defines.events.on_train_changed_state, nil)
+      script.on_nth_tick(nil)
       -- revert rotated trains
       for _, surface in pairs(game.surfaces) do
         local trains = surface.get_trains()
         for _,train in pairs(trains) do
           UnrotateTrain(train)
         end
-      end		    
+      end
+      -- clean globals
+      global.rotated_locos = {}
+      global.trains_to_rotate = {}
     end
   end
+  
   if event.setting == "Noxys_Multidirectional_Trains-on_nth_tick" then
     Nth_tick = settings.global["Noxys_Multidirectional_Trains-on_nth_tick"].value
     script.on_nth_tick(nil)
