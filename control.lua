@@ -1,111 +1,147 @@
+local settings_enabled = settings.global["Noxys_Multidirectional_Trains-enabled"].value
+local settings_nth_tick = settings.global["Noxys_Multidirectional_Trains-on_nth_tick"].value
+
 local function rotate(loco)
-	-- @todo: This is a hack since you can't rotate stock when it is connected.
-	loco.disconnect_rolling_stock(defines.rail_direction.back)
-	loco.disconnect_rolling_stock(defines.rail_direction.front)
+	-- todo: This is a hack since you can't rotate stock when it is connected.
+	local disconnected_back = loco.disconnect_rolling_stock(defines.rail_direction.back)
+	local disconnected_front = loco.disconnect_rolling_stock(defines.rail_direction.front)
 	loco.rotate()
-	-- Try to reconnect
-	loco.connect_rolling_stock(defines.rail_direction.back)
-	loco.connect_rolling_stock(defines.rail_direction.front)
-end
-
-script.on_init(function()
-	global.movingstate = {}
-end)
-
-script.on_event(defines.events.on_train_created, function (event)
-	if event.old_train_id_1 then -- We can ignore old_train_id_2 since the first old id is the one that gets its stuff copied.
-		-- Train changed
-		global.movingstate[event.train.id] = global.movingstate[event.old_train_id_1]
-		global.movingstate[event.old_train_id_1] = nil
-	else
-		-- Train created
-		global.movingstate[event.train.id] = false
+	if disconnected_back then
+		loco.connect_rolling_stock(defines.rail_direction.front)
 	end
-end)
-
-local config = {}
-
-local function cache_settings()
-	config.enabled     = settings.global["Noxys_Multidirectional_Trains-enabled"].value
-	config.on_nth_tick = settings.global["Noxys_Multidirectional_Trains-on_nth_tick"].value
+	if disconnected_front then
+		loco.connect_rolling_stock(defines.rail_direction.back)
+	end
+	-- Error handling removed since a meaningfull error message is difficult (or too noisy) to produce.
 end
 
-cache_settings()
-
+-- Rotate all locomotives to face driving direction, rotated locomotives are added to global.rotated_locos.
 local function train_rotate(train)
-	local rotated = false
 	local manual_mode = train.manual_mode
+	if manual_mode then return end -- never rotate manual mode trains
 	for _,locos in pairs(train.locomotives) do
 		for _,loco in pairs(locos) do
-			if loco.speed < 0 then
-				if not global[loco.unit_number] then -- prevent double rotates
-					global[loco.unit_number] = true
-					rotate(loco)
-					rotated = true
-					train = loco.train
-				end
+			if not global.rotated_locos[loco.unit_number] and loco.speed < 0 then -- prevent double rotates
+				global.rotated_locos[loco.unit_number] = true
+				rotate(loco)
+				train = loco.train -- Ensure that this reference is valid for restoring manual mode.
 			end
 		end
 	end
-	if rotated then
+	if train.manual_mode ~= manual_mode then
 		train.manual_mode = manual_mode
 	end
 end
 
+-- Revert the rotated locomotives listed in global.rotated_locos.
 local function train_unrotate(train)
-	local rotated = false
 	local manual_mode = train.manual_mode
 	for _, locos in pairs(train.locomotives) do
 		for _, loco in pairs(locos) do
-			if global[loco.unit_number] then
+			if global.rotated_locos[loco.unit_number] then
 				rotate(loco)
-				rotated = true
-				global[loco.unit_number] = nil
-				train = loco.train
+				global.rotated_locos[loco.unit_number] = nil
+				train = loco.train -- Ensure that this reference is valid for restoring manual mode.
 			end
 		end
 	end
-	if rotated then
+	if train.manual_mode ~= manual_mode then
 		train.manual_mode = manual_mode
 	end
 end
 
-local function update_settings(event)
-	if event.setting == "Noxys_Multidirectional_Trains-enabled" then
-		config.enabled     = settings.global["Noxys_Multidirectional_Trains-enabled"].value
-		if config.enabled == false then
-			-- revert rotated trains
-			local trains = game.surfaces[1].get_trains()
-			for _,train in pairs(trains) do
-				train_unrotate(train)
+-- Hack to get locomotive orientation through speed some ticks after it started moving.
+local function on_nth_tick()
+	for trainID, train in pairs(global.trains_to_rotate) do
+		if train.valid then
+			if train.speed ~= 0 then
+				train_rotate(train)
+				global.trains_to_rotate[trainID] = nil
 			end
+		else
+			global.trains_to_rotate[trainID] = nil
 		end
 	end
-	if event.setting == "Noxys_Multidirectional_Trains-on_nth_tick" then
-		config.on_nth_tick = settings.global["Noxys_Multidirectional_Trains-on_nth_tick"].value
+	-- Unsubscribe once all trains are rotated.
+	if not next(global.trains_to_rotate) then
+		script.on_nth_tick(nil)
 	end
 end
 
-script.on_event({defines.events.on_runtime_mod_setting_changed}, update_settings)
-
-script.on_event(defines.events.on_tick, function(event)
-	if not config.enabled then return end
-	if event.tick % config.on_nth_tick ~= 0 then return end
-	local trains = game.surfaces[1].get_trains()
-	for _,train in pairs(trains) do
-		if not train or not train.valid then return end
-		local id = train.id
-		local moving = train.speed ~= 0
-		if moving ~= global.movingstate[id] then
-			local global = global
-			global.movingstate[id] = moving
-			if moving then -- Started moving: figure out which locos are facing the wrong way.
-				if not train.manual_mode then
-					train_rotate(train)
-				end
-			else -- No longer moving. Revert the train to its neutral state.
-				train_unrotate(train)
-			end
+local function on_train_changed_state(event)
+	local train = event.train
+	if train.state == defines.train_state.wait_station or
+		(train.manual_mode and event.old_state ~= defines.train_state.manual_control_stop and
+		event.old_state ~= defines.train_state.manual_control)
+	then
+		global.trains_to_rotate[train.id] = nil
+		if not next(global.trains_to_rotate) then
+			script.on_nth_tick(nil)
+		end
+		train_unrotate(train)
+	elseif not train.manual_mode and
+		(event.old_state == defines.train_state.wait_station or
+		event.old_state == defines.train_state.manual_control)
+	then
+		if (#train.locomotives.front_movers + #train.locomotives.back_movers) > 1 then
+			global.trains_to_rotate[train.id] = train
+			script.on_nth_tick(settings_nth_tick, on_nth_tick)
 		end
 	end
+end
+
+local function init_events()
+	if settings_enabled then
+		script.on_event(defines.events.on_train_changed_state, on_train_changed_state)
+	else
+		script.on_event(defines.events.on_train_changed_state, nil)
+	end
+	if global.trains_to_rotate and next(global.trains_to_rotate) then
+		script.on_nth_tick(settings_nth_tick, on_nth_tick)
+	end
+end
+
+script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
+	if event.setting == "Noxys_Multidirectional_Trains-enabled" then
+		settings_enabled = settings.global["Noxys_Multidirectional_Trains-enabled"].value
+		if settings_enabled then
+			script.on_event(defines.events.on_train_changed_state, on_train_changed_state)
+		else
+			script.on_event(defines.events.on_train_changed_state, nil)
+			script.on_nth_tick(nil)
+			-- Revert the rotated trains.
+			for _, surface in pairs(game.surfaces) do
+				local trains = surface.get_trains()
+				for _,train in pairs(trains) do
+				train_unrotate(train)
+				end
+			end
+			-- Clean globals.
+			global.rotated_locos = {}
+			global.trains_to_rotate = {}
+		end
+	end
+	if event.setting == "Noxys_Multidirectional_Trains-on_nth_tick" then
+		settings_nth_tick = settings.global["Noxys_Multidirectional_Trains-on_nth_tick"].value
+		script.on_nth_tick(nil)
+		if next(global.trains_to_rotate) then
+			script.on_nth_tick(settings_nth_tick, on_nth_tick)
+		end
+	end
+end)
+
+script.on_load(function()
+	init_events()
+end)
+
+script.on_init(function()
+	global.rotated_locos = global.rotated_locos or {}
+	global.trains_to_rotate = global.trains_to_rotate or {}
+	init_events()
+end)
+
+script.on_configuration_changed(function()
+	global.rotated_locos = global.rotated_locos or {}
+	global.trains_to_rotate = global.trains_to_rotate or {}
+	init_events()
 end)
