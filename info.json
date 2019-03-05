@@ -1,11 +1,11 @@
 {
   "name": "Noxys_Multidirectional_Trains",
-  "version": "0.0.8",
-  "factorio_version": "0.16",
+  "version": "0.1.0",
+  "factorio_version": "0.17",
   "title": "Noxys Multidirectional Trains",
   "author": "Noxy",
-  "contact": "donotcontactme@example.com",
-  "homepage": "https://mods.factorio.com/",
+  "contact": "not.a.valid.email.address@example.com",
+  "homepage": "https://mods.factorio.com/user/_noxy_",
   "description": "Sneakily rotate locomotives that are being pulled backwards so that they actually help with acceleration instead of just being dead weight.",
-  "dependencies": ["base >= 0.16.27"]
+  "dependencies": ["base >= 0.17.0"]
 }
