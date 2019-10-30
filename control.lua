@@ -71,8 +71,8 @@ end
 local function on_train_changed_state(event)
 	local train = event.train
 	if train.state == defines.train_state.wait_station or
-    train.state == defines.train_state.no_path or
-    train.state == defines.train_state.path_lost or
+		train.state == defines.train_state.no_path or
+		train.state == defines.train_state.path_lost or
 		(train.manual_mode and event.old_state ~= defines.train_state.manual_control_stop and
 		event.old_state ~= defines.train_state.manual_control)
 	then
