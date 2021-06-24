@@ -18,6 +18,13 @@ data:extend({
 		maximum_value = 600,
 		order = "b",
 	},
+	{
+		type = "bool-setting",
+		name = "Noxys_Multidirectional_Trains-station_limits",
+		setting_type = "runtime-global",
+		default_value = true,
+		order = "c",
+	},
 
 	-- Per user
 
