@@ -1,5 +1,3 @@
-local inspect = require"inspect"
-
 local settings_enabled = settings.global["Noxys_Multidirectional_Trains-enabled"].value
 local settings_nth_tick = settings.global["Noxys_Multidirectional_Trains-on_nth_tick"].value
 local settings_station_limits = settings.global["Noxys_Multidirectional_Trains-station_limits"].value
