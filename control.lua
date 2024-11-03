@@ -19,6 +19,7 @@ end
 -- Rotate all locomotives to face driving direction, rotated locomotives are added to storage.rotated_locos.
 local function train_rotate(train)
   local schedule = train.schedule
+  local group = train.group
   local manual_mode = train.manual_mode
   if manual_mode then return end -- never rotate manual mode trains
   for _, locos in pairs(train.locomotives) do
@@ -33,6 +34,7 @@ local function train_rotate(train)
   if train.manual_mode ~= manual_mode then
     train.manual_mode = manual_mode
   end
+  train.group = group
   train.schedule = schedule
 end
 
@@ -63,6 +65,7 @@ end
 -- Revert the rotated locomotives listed in storage.rotated_locos.
 local function train_unrotate(train)
   local schedule = train.schedule
+  local group = train.group
   local manual_mode = train.manual_mode
   local station = train.station
   if settings_station_limits and station and station.trains_limit == 1 then
@@ -82,6 +85,7 @@ local function train_unrotate(train)
   if train.manual_mode ~= manual_mode then
     train.manual_mode = manual_mode
   end
+  train.group = group
   train.schedule = schedule
 end
 
