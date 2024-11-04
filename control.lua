@@ -18,8 +18,7 @@ end
 
 -- Rotate all locomotives to face driving direction, rotated locomotives are added to storage.rotated_locos.
 local function train_rotate(train)
-  local schedule = train.schedule
-  local group = train.group
+  local schedule_index = train.schedule.current
   local manual_mode = train.manual_mode
   if manual_mode then return end -- never rotate manual mode trains
   for _, locos in pairs(train.locomotives) do
@@ -34,8 +33,9 @@ local function train_rotate(train)
   if train.manual_mode ~= manual_mode then
     train.manual_mode = manual_mode
   end
-  train.group = group
-  train.schedule = schedule
+  if schedule_index and train.valid then
+    train.go_to_station(schedule_index)
+  end
 end
 
 -- Hack to get locomotive orientation through speed some ticks after it started moving.
@@ -64,8 +64,7 @@ end
 
 -- Revert the rotated locomotives listed in storage.rotated_locos.
 local function train_unrotate(train)
-  local schedule = train.schedule
-  local group = train.group
+  local schedule_index = train.schedule.current
   local manual_mode = train.manual_mode
   local station = train.station
   if settings_station_limits and station and station.trains_limit == 1 then
@@ -85,8 +84,9 @@ local function train_unrotate(train)
   if train.manual_mode ~= manual_mode then
     train.manual_mode = manual_mode
   end
-  train.group = group
-  train.schedule = schedule
+  if schedule_index and train.valid then
+    train.go_to_station(schedule_index)
+  end
 end
 
 local function on_train_changed_state(event)
@@ -137,7 +137,7 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
       script.on_event(defines.events.on_train_changed_state, nil)
       script.on_nth_tick(nil)
       -- Revert the rotated trains.
-      local trains = game.train_manager.get_trains{}
+      local trains = game.train_manager.get_trains {}
       for _, train in pairs(trains) do
         train_unrotate(train)
       end
