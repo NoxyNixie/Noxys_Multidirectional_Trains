@@ -26,9 +26,7 @@ end
 
 ---Rotate all locomotives to face driving direction, rotated locomotives are added to `storage.rotated_locos`.
 ---@param train LuaTrain
----@param old_state defines.train_state?
-local function train_rotate(train, old_state)
-  local schedule_index = train.schedule.current
+local function train_rotate(train)
   local manual_mode = train.manual_mode
   if manual_mode then return end -- never rotate manual mode trains
 
@@ -40,7 +38,7 @@ local function train_rotate(train, old_state)
       ---@cast loco LuaEntity
       if not storage.rotated_locos[loco.unit_number] and loco.speed < 0 then -- prevent double rotates
         if not has_raised_rotate_started_event then -- raise event only if the train is going to rotate.
-          raise_train_rotating(train, old_state)
+          raise_train_rotating(train)
           has_raised_rotate_started_event = true
         end
         storage.rotated_locos[loco.unit_number] = true
@@ -57,7 +55,7 @@ local function train_rotate(train, old_state)
   end
 
   if has_raised_rotate_started_event then -- raise event only if the train was rotated.
-    raise_on_train_rotated(train, old_train_id, old_state)
+    raise_on_train_rotated(train, old_train_id)
   end
 end
 
