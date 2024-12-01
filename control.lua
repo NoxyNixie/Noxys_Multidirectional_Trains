@@ -27,6 +27,7 @@ end
 ---Rotate all locomotives to face driving direction, rotated locomotives are added to `storage.rotated_locos`.
 ---@param train LuaTrain
 local function train_rotate(train)
+  local schedule_index = train.schedule and train.schedule.current
   local manual_mode = train.manual_mode
   if manual_mode then return end -- never rotate manual mode trains
 
@@ -86,7 +87,7 @@ end
 ---Revert the rotated locomotives listed in `storage.rotated_locos`.
 ---@param train LuaTrain
 local function train_unrotate(train)
-  local schedule_index = train.schedule.current
+  local schedule_index = train.schedule and train.schedule.current
   local manual_mode = train.manual_mode
   local station = train.station
   if settings_station_limits and station and station.trains_limit == 1 then
