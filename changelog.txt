@@ -1,0 +1,7 @@
+---------------------------------------------------------------------------------------------------
+Version: 0.5.3
+Date: ????
+  Features:
+    - Added remote interface with events for train rotating, unrotating, and for each locomotive rotated
+  Bugfixes:
+    - Fixed crash in the event a train is rotated without a schedule
